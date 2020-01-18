@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -250,13 +251,26 @@ func (d *Decoder) origin(v string) (*Origin, error) {
 		return nil, errFormat
 	}
 	o := new(Origin)
-	o.Username, o.Network, o.Type, o.Address = p[0], p[3], p[4], p[5]
 	var err error
-	if o.SessionID, err = d.int(p[1]); err != nil {
-		return nil, err
-	}
-	if o.SessionVersion, err = d.int(p[2]); err != nil {
-		return nil, err
+	split := strings.Split(v, " ")
+	//some nvr use session as 'o=RTSP Session 0 0 IN IP4 0.0.0.0' or 'o=- 14665860 31787219 1 IN IP4 192.168.35.39'
+	if len(split) != 6 {
+		lastIdx := len(split) //7
+		o.Username, o.Network, o.Type, o.Address = p[lastIdx-6], split[lastIdx-3], split[lastIdx-2], split[lastIdx-1]
+		if o.SessionID, err = d.int(p[lastIdx-5]); err != nil {
+			return nil, err
+		}
+		if o.SessionVersion, err = d.int(p[lastIdx-4]); err != nil {
+			return nil, err
+		}
+	} else {
+		o.Username, o.Network, o.Type, o.Address = p[0], p[3], p[4], p[5]
+		if o.SessionID, err = d.int(p[1]); err != nil {
+			return nil, err
+		}
+		if o.SessionVersion, err = d.int(p[2]); err != nil {
+			return nil, err
+		}
 	}
 	return o, nil
 }
